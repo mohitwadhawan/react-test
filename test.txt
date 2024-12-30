@@ -421,3 +421,49 @@ const PlatformForm: React.FC = () => {
 };
 
 export default PlatformForm;
+
+
+
+====
+
+
+import React, { useEffect } from "react";
+import { useDispatch } from "react-redux";
+import { setPlatformData } from "./store/platformSlice";
+import PlatformForm from "./components/PlatformForm";
+
+const App: React.FC = () => {
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      // Validate and process the message from the parent
+      if (event.data && event.data.platform && event.data.configuration) {
+        dispatch(
+          setPlatformData({
+            platform: event.data.platform,
+            configuration: event.data.configuration,
+            endpoint: event.data.endpoint || {},
+          })
+        );
+      }
+    };
+
+    // Listen for messages from the parent window
+    window.addEventListener("message", handleMessage);
+
+    // Cleanup the event listener on unmount
+    return () => {
+      window.removeEventListener("message", handleMessage);
+    };
+  }, [dispatch]);
+
+  return (
+    <div>
+      <h1>React Iframe App</h1>
+      <PlatformForm />
+    </div>
+  );
+};
+
+export default App;
