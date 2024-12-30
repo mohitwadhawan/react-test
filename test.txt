@@ -1,0 +1,309 @@
+import React from "react";
+
+interface TextInputFieldProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  hidden?: boolean;
+}
+
+const TextInputField: React.FC<TextInputFieldProps> = ({ label, value, onChange, hidden }) => {
+  if (hidden) return null;
+
+  return (
+    <div>
+      <label>
+        {label}:
+        <input type="text" value={value} onChange={(e) => onChange(e.target.value)} />
+      </label>
+    </div>
+  );
+};
+
+export default TextInputField;
+
+
+import React from "react";
+
+interface SelectFieldProps {
+  label: string;
+  options: string[];
+  value: string;
+  onChange: (value: string) => void;
+  hidden?: boolean;
+}
+
+const SelectField: React.FC<SelectFieldProps> = ({ label, options, value, onChange, hidden }) => {
+  if (hidden) return null;
+
+  return (
+    <div>
+      <label>
+        {label}:
+        <select value={value} onChange={(e) => onChange(e.target.value)}>
+          {options.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </label>
+    </div>
+  );
+};
+
+export default SelectField;
+
+
+import React from "react";
+
+interface MultiSelectFieldProps {
+  label: string;
+  options: string[];
+  selectedValues: string[];
+  onChange: (values: string[]) => void;
+  hidden?: boolean;
+}
+
+const MultiSelectField: React.FC<MultiSelectFieldProps> = ({
+  label,
+  options,
+  selectedValues,
+  onChange,
+  hidden,
+}) => {
+  if (hidden) return null;
+
+  const handleChange = (value: string) => {
+    if (selectedValues.includes(value)) {
+      onChange(selectedValues.filter((v) => v !== value));
+    } else {
+      onChange([...selectedValues, value]);
+    }
+  };
+
+  return (
+    <div>
+      <label>{label}:</label>
+      <div>
+        {options.map((option) => (
+          <label key={option}>
+            <input
+              type="checkbox"
+              value={option}
+              checked={selectedValues.includes(option)}
+              onChange={() => handleChange(option)}
+            />
+            {option}
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export default MultiSelectField;
+
+
+import React from "react";
+
+interface TextAreaFieldProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  hidden?: boolean;
+}
+
+const TextAreaField: React.FC<TextAreaFieldProps> = ({ label, value, onChange, hidden }) => {
+  if (hidden) return null;
+
+  return (
+    <div>
+      <label>
+        {label}:
+        <textarea value={value} onChange={(e) => onChange(e.target.value)} />
+      </label>
+    </div>
+  );
+};
+
+export default TextAreaField;
+
+
+import React from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState, AppDispatch } from "../store";
+import { updateField } from "../store/platformSlice";
+import TextInputField from "../fields/TextInputField";
+import SelectField from "../fields/SelectField";
+import MultiSelectField from "../fields/MultiSelectField";
+import TextAreaField from "../fields/TextAreaField";
+
+const PlatformForm: React.FC = () => {
+  const { platform, configuration } = useSelector((state: RootState) => state.platform);
+  const dispatch: AppDispatch = useDispatch();
+
+  const handleChange = (field: string, value: any) => {
+    dispatch(updateField({ field, value }));
+  };
+
+  return (
+    <form>
+      <h3>Platform: {platform}</h3>
+
+      <TextInputField
+        label="Title"
+        value={configuration.title || ""}
+        onChange={(value) => handleChange("title", value)}
+        hidden={platform === "magento"}
+      />
+
+      <TextAreaField
+        label="Description"
+        value={configuration.description || ""}
+        onChange={(value) => handleChange("description", value)}
+        hidden={platform === "magento"}
+      />
+
+      <SelectField
+        label="Enabled"
+        options={["0", "1"]}
+        value={configuration.enabled || ""}
+        onChange={(value) => handleChange("enabled", value)}
+      />
+
+      <MultiSelectField
+        label="Test Modes"
+        options={["Live", "Sandbox"]}
+        selectedValues={configuration.testModes || []}
+        onChange={(values) => handleChange("testModes", values)}
+      />
+
+      <button
+        type="button"
+        onClick={() => {
+          window.parent.postMessage(
+            {
+              updatedData: configuration,
+            },
+            "*"
+          );
+        }}
+      >
+        Save
+      </button>
+    </form>
+  );
+};
+
+export default PlatformForm;
+
+
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+
+interface PlatformState {
+  platform: string;
+  configuration: Record<string, any>;
+  endpoint: Record<string, Record<string, any>>;
+  updatedFields: Record<string, any>;
+}
+
+const initialState: PlatformState = {
+  platform: "",
+  configuration: {},
+  endpoint: {},
+  updatedFields: {},
+};
+
+const platformSlice = createSlice({
+  name: "platform",
+  initialState,
+  reducers: {
+    setPlatformData(state, action: PayloadAction<Omit<PlatformState, "updatedFields">>) {
+      state.platform = action.payload.platform;
+      state.configuration = action.payload.configuration;
+      state.endpoint = action.payload.endpoint;
+    },
+    updateField(state, action: PayloadAction<{ field: string; value: any }>) {
+      state.updatedFields[action.payload.field] = action.payload.value;
+    },
+    resetUpdatedFields(state) {
+      state.updatedFields = {};
+    },
+  },
+});
+
+export const { setPlatformData, updateField, resetUpdatedFields } = platformSlice.actions;
+export default platformSlice.reducer;
+
+
+import { configureStore } from "@reduxjs/toolkit";
+import platformReducer from "./platformSlice";
+
+export const store = configureStore({
+  reducer: {
+    platform: platformReducer,
+  },
+});
+
+export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;
+
+
+import React, { useEffect } from "react";
+import { useDispatch } from "react-redux";
+import { setPlatformData } from "./store/platformSlice";
+import PlatformForm from "./components/PlatformForm";
+
+const App: React.FC = () => {
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    const receivedData = {
+      data: {
+        platform: "woocommerce",
+        configuration: {
+          enabled: "1",
+          title: "Sample Title",
+          description: "This is a sample description.",
+          testModes: ["Live"],
+        },
+        endpoint: {
+          live: {},
+          test: {},
+        },
+      },
+    };
+
+    dispatch(
+      setPlatformData({
+        platform: receivedData.data.platform,
+        configuration: receivedData.data.configuration,
+        endpoint: receivedData.data.endpoint,
+      })
+    );
+  }, [dispatch]);
+
+  return (
+    <div>
+      <h1>React Iframe App</h1>
+      <PlatformForm />
+    </div>
+  );
+};
+
+export default App;
+
+
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { Provider } from "react-redux";
+import { store } from "./store";
+import App from "./App";
+
+const root = ReactDOM.createRoot(document.getElementById("root") as HTMLElement);
+root.render(
+  <Provider store={store}>
+    <App />
+  </Provider>
+);
