@@ -307,3 +307,117 @@ root.render(
     <App />
   </Provider>
 );
+
+
+
+=====
+
+
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+
+interface PlatformState {
+  platform: string;
+  configuration: Record<string, any>;
+  updatedFields: Record<string, any>;
+}
+
+const initialState: PlatformState = {
+  platform: "",
+  configuration: {},
+  updatedFields: {},
+};
+
+const platformSlice = createSlice({
+  name: "platform",
+  initialState,
+  reducers: {
+    setPlatformData(state, action: PayloadAction<Omit<PlatformState, "updatedFields">>) {
+      state.platform = action.payload.platform;
+      state.configuration = action.payload.configuration;
+    },
+    updateField(state, action: PayloadAction<{ field: string; value: any }>) {
+      state.updatedFields[action.payload.field] = action.payload.value;
+    },
+    resetUpdatedFields(state) {
+      state.updatedFields = {};
+    },
+  },
+});
+
+export const { setPlatformData, updateField, resetUpdatedFields } = platformSlice.actions;
+export default platformSlice.reducer;
+
+
+
+=====
+
+import React from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { RootState, AppDispatch } from "../store";
+import { updateField, resetUpdatedFields } from "../store/platformSlice";
+import TextInputField from "../fields/TextInputField";
+import SelectField from "../fields/SelectField";
+import MultiSelectField from "../fields/MultiSelectField";
+import TextAreaField from "../fields/TextAreaField";
+
+const PlatformForm: React.FC = () => {
+  const { platform, configuration, updatedFields } = useSelector((state: RootState) => state.platform);
+  const dispatch: AppDispatch = useDispatch();
+
+  const handleChange = (field: string, value: any) => {
+    dispatch(updateField({ field, value }));
+  };
+
+  const handleSave = () => {
+    const payload = {
+      data: {
+        platform,
+        configuration: updatedFields,
+      },
+    };
+
+    // Send data to parent
+    window.parent.postMessage(payload, "*");
+
+    // Reset updated fields
+    dispatch(resetUpdatedFields());
+  };
+
+  return (
+    <form>
+      <h3>Platform: {platform}</h3>
+
+      <TextInputField
+        label="Title"
+        value={configuration.title || ""}
+        onChange={(value) => handleChange("title", value)}
+      />
+
+      <TextAreaField
+        label="Description"
+        value={configuration.description || ""}
+        onChange={(value) => handleChange("description", value)}
+      />
+
+      <SelectField
+        label="Enabled"
+        options={["0", "1"]}
+        value={configuration.enabled || ""}
+        onChange={(value) => handleChange("enabled", value)}
+      />
+
+      <MultiSelectField
+        label="Test Modes"
+        options={["Live", "Sandbox"]}
+        selectedValues={configuration.testModes || []}
+        onChange={(values) => handleChange("testModes", values)}
+      />
+
+      <button type="button" onClick={handleSave}>
+        Save
+      </button>
+    </form>
+  );
+};
+
+export default PlatformForm;
