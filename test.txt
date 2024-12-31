@@ -1,293 +1,3 @@
-import React from "react";
-import ReactDOM from "react-dom/client";
-import { Provider } from "react-redux";
-import { store } from "./store";
-import App from "./App";
-
-const root = ReactDOM.createRoot(document.getElementById("root") as HTMLElement);
-root.render(
-  <Provider store={store}>
-    <App />
-  </Provider>
-);
-
-===
-
-import React, { useEffect } from "react";
-import { useDispatch } from "react-redux";
-import { setPlatformData } from "./store/platformSlice";
-import PlatformForm from "./components/PlatformForm";
-
-// Add bootstrap CSS via CDN URL
-const bootstrapCss = document.createElement('link');
-bootstrapCss.rel = 'stylesheet';
-bootstrapCss.href = 'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css';
-document.head.appendChild(bootstrapCss);
-
-const App: React.FC = () => {
-  const dispatch = useDispatch();
-
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      // Validate and process the message from the parent
-      if (event.data && event.data.platform && event.data.configuration) {
-        dispatch(
-          setPlatformData({
-            platform: event.data.platform,
-            configuration: event.data.configuration,
-            endpoint: event.data.endpoint || {},
-          })
-        );
-      }
-    };
-
-    // Listen for messages from the parent window
-    window.addEventListener("message", handleMessage);
-
-    // Cleanup the event listener on unmount
-    return () => {
-      window.removeEventListener("message", handleMessage);
-    };
-  }, [dispatch]);
-
-  return (
-    <div>
-      <h1>React Iframe App</h1>
-      
-      <PlatformForm />
-    </div>
-  );
-};
-
-export default App;
-
-
-===
-
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-
-interface PlatformState {
-  platform: string;
-  configuration: Record<string, any>;
-  updatedFields: Record<string, any>;
-  endpoint: Record<string, any>;
-}
-
-const initialState: PlatformState = {
-  platform: "",
-  configuration: {},
-  updatedFields: {},
-  endpoint: {},
-};
-
-const platformSlice = createSlice({
-  name: "platform",
-  initialState,
-  reducers: {
-    setPlatformData(state, action: PayloadAction<Omit<PlatformState, "updatedFields">>) {
-      state.platform = action.payload.platform;
-      state.configuration = action.payload.configuration;
-    },
-    updateField(state, action: PayloadAction<{ field: string; value: any }>) {
-      state.updatedFields[action.payload.field] = action.payload.value;
-    },
-    resetUpdatedFields(state) {
-      state.updatedFields = {};
-    },
-  },
-});
-
-export const { setPlatformData, updateField, resetUpdatedFields } = platformSlice.actions;
-export default platformSlice.reducer;
-
-==
-
-import { configureStore } from "@reduxjs/toolkit";
-import platformReducer from "./platformSlice";
-
-export const store = configureStore({
-  reducer: {
-    platform: platformReducer,
-  },
-});
-
-export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = typeof store.dispatch;
-
----
-
-
-import React from "react";
-
-interface TextInputFieldProps {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  hidden?: boolean;
-  name?: string;
-}
-
-const TextInputField: React.FC<TextInputFieldProps> = ({ label, value, onChange, hidden, name }) => {
-  if (hidden) return null;
-
-  return (
-    <div className="mb-3">
-      <div className="mb-3 d-flex align-items-center">
-        <label className="form-label me-3" style={{ minWidth: '200px', marginBottom: 0 }}>{label}:</label>
-        <input 
-          type="text"
-          name={name}
-          className="form-control"
-          style={{ maxWidth: '300px' }}
-          defaultValue={value} 
-          onChange={(e) => onChange(e.target.value)} 
-        />
-      </div>
-    </div>
-  );
-};
-
-export default TextInputField;
-
-====
-
-
-import React from 'react';
-
-interface TextAreaFieldProps {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  name?: string;
-  hidden?: boolean;
-}
-
-const TextAreaField: React.FC<TextAreaFieldProps> = ({ label, value, onChange, name, hidden }) => {
-  if (hidden) return null;
-
-  return (
-    <div className="mb-3">
-      <div className="mb-3 d-flex align-items-center">
-        <label className="form-label me-3" style={{ minWidth: '200px', marginBottom: 0 }}>{label}:</label>
-        <textarea 
-          defaultValue={value}
-          onChange={(e) => onChange(e.target.value)}
-          rows={4}
-          className="form-control"
-          style={{ maxWidth: '300px' }}
-          name={name}
-        />
-      </div>
-    </div>
-  );
-};
-
-export default TextAreaField;
-
-
-===
-
-import React from "react";
-
-interface SelectFieldProps {
-  label: string;
-  options: { value: string; label: string }[];
-  value: string;
-  onChange: (value: string) => void;
-  hidden?: boolean;
-  name?: string;
-}
-
-const SelectField: React.FC<SelectFieldProps> = ({ label, options, value, onChange, hidden, name }) => {
-  if (hidden) return null;
-
-  return (
-    <div className="mb-3">
-      <div className="mb-3 d-flex align-items-center">
-        <label className="form-label me-3" style={{ minWidth: '200px', marginBottom: 0 }}>{label}:</label>
-        <select 
-          className="form-select"
-          style={{ maxWidth: '300px' }}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          name={name}
-        >
-          {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
-    </div>
-  );
-};
-
-export default SelectField;
-
-
-====
-
-
-import React, { useEffect, useState } from "react";
-
-interface MultiSelectFieldProps {
-  label: string;
-  options: { value: string; label: string }[];
-  selectedValues: string[];
-  onChange: (values: string[]) => void;
-  hidden?: boolean;
-  name?: string;
-}
-
-const MultiSelectField: React.FC<MultiSelectFieldProps> = ({
-  label,
-  options,
-  selectedValues = [],
-  onChange,
-  hidden,
-  name,
-}) => {
-  const [localSelectedValues, setLocalSelectedValues] = useState<string[]>(selectedValues);
-
-  useEffect(() => {
-    setLocalSelectedValues(selectedValues);
-  }, [selectedValues]);
-
-  if (hidden) return null;
-
-  return (
-    <div className="mb-3">
-      <div className="mb-3 d-flex align-items-center">
-        <label className="form-label me-3 mb-0" style={{ minWidth: '200px', marginBottom: 0 }}>{label}:</label>
-        <select 
-          multiple 
-          className="form-select"
-          value={localSelectedValues}
-          name={name}
-          style={{ maxWidth: '300px' }}
-          onChange={(e) => {
-            const options = Array.from(e.target.selectedOptions, option => option.value);
-            setLocalSelectedValues(options);
-            onChange(options);
-          }}
-        >
-          {options.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
-    </div>
-  );
-};
-
-export default MultiSelectField;
-
-===
-
-
 import React, { useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState, AppDispatch } from "../store";
@@ -298,7 +8,7 @@ import MultiSelectField from "../fields/MultiSelectField";
 import TextAreaField from "../fields/TextAreaField";
 
 const PlatformForm: React.FC = () => {
-  const { configuration } = useSelector((state: RootState) => state.platform);
+  const { configuration, updatedFields } = useSelector((state: RootState) => state.platform);
   const dispatch: AppDispatch = useDispatch();
   const [activeTab, setActiveTab] = useState("settings");
   const [isSandbox, setIsSandbox] = useState(0);
@@ -375,6 +85,21 @@ const PlatformForm: React.FC = () => {
 
   const isExcludedPlatform = ["magento", "shopify", "bigcommerce"].includes(configuration.platform);
 
+  const handleSubmit = () => {
+    const data = {
+      data: {
+        platform: configuration.platform,
+        configuration: updatedFields
+      }
+    };
+    alert(JSON.stringify(data));
+    window.parent.postMessage(data, '*');
+  };
+
+  const handleFieldChange = (field: string, value: any) => {
+    dispatch(updateField({ field, value }));
+  };
+
   return (
     <div className="container py-4 d-flex justify-content-center">
       <div className="col-md-8">
@@ -394,26 +119,29 @@ const PlatformForm: React.FC = () => {
         </div>
 
         {activeTab === "settings" && (
-          <form className="settings-form">
+          <form className="settings-form" onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
             <SelectField
               name="enabled"
               label="Enabled"
               options={yesNoOptions}
               value={configuration.enabled || ""}
-              onChange={(value) => dispatch(updateField({ field: "enabled", value }))}
+              onChange={(value) => handleFieldChange("enabled", value)}
             />
             <TextInputField
               name="title"
               label="Title"
               value={configuration.title || ""}
-              onChange={(value) => dispatch(updateField({ field: "title", value }))}
+              onChange={(value) => handleFieldChange("title", value)}
             />
             <SelectField
               name="isSandbox"
               label="Is Sandbox"
               options={yesNoOptions}
               value={isSandbox.toString()}
-              onChange={(value) => setIsSandbox(Number(value))}
+              onChange={(value) => {
+                setIsSandbox(Number(value));
+                handleFieldChange("isSandbox", value);
+              }}
             />
 
             {isSandbox === 1 && (
@@ -423,15 +151,18 @@ const PlatformForm: React.FC = () => {
                   label="Sandbox Activation Key"
                   options={yesNoOptions}
                   value={sandboxActivationKey.toString()}
-                  onChange={(value) => setSandboxActivationKey(Number(value))}
+                  onChange={(value) => {
+                    setSandboxActivationKey(Number(value));
+                    handleFieldChange("sandboxActivationKey", value);
+                  }}
                 />
                 {sandboxActivationKey === 1 && (
                   <>
                     <TextInputField
                       name="sandboxActivationKeyValue"
                       label="Sandbox Activation Key"
-                      value=""
-                      onChange={() => {}}
+                      value={configuration.sandboxActivationKeyValue || ""}
+                      onChange={(value) => handleFieldChange("sandboxActivationKeyValue", value)}
                       hidden={isExcludedPlatform}
                     />
                     <div className="card mb-4 p-3">
@@ -441,7 +172,10 @@ const PlatformForm: React.FC = () => {
                             name={`onlineShopDomain${index}`}
                             label={`Online Shop Domain ${index + 1}`}
                             value={domain}
-                            onChange={(value) => handleDomainChange(index, value)}
+                            onChange={(value) => {
+                              handleDomainChange(index, value);
+                              handleFieldChange(`onlineShopDomain${index}`, value);
+                            }}
                             hidden={isExcludedPlatform}
                           />
                           <button 
@@ -476,29 +210,29 @@ const PlatformForm: React.FC = () => {
                 <TextInputField 
                   name="sandboxMerchant"
                   label="Sandbox Merchant" 
-                  value="" 
-                  onChange={() => {}} 
+                  value={configuration.sandboxMerchant || ""} 
+                  onChange={(value) => handleFieldChange("sandboxMerchant", value)} 
                   hidden={sandboxActivationKey === 1 || isExcludedPlatform}
                 />
                 <TextInputField 
                   name="sandboxCmerchant"
                   label="Sandbox Cmerchant" 
-                  value="" 
-                  onChange={() => {}} 
+                  value={configuration.sandboxCmerchant || ""} 
+                  onChange={(value) => handleFieldChange("sandboxCmerchant", value)} 
                   hidden={sandboxActivationKey === 1 || isExcludedPlatform}
                 />
                 <TextInputField 
                   name="sandboxCid"
                   label="Sandbox C id" 
-                  value="" 
-                  onChange={() => {}} 
+                  value={configuration.sandboxCid || ""} 
+                  onChange={(value) => handleFieldChange("sandboxCid", value)} 
                   hidden={sandboxActivationKey === 1 || isExcludedPlatform}
                 />
                 <TextInputField 
                   name="sandboxCSecret"
                   label="Sandbox C Secret" 
-                  value="" 
-                  onChange={() => {}} 
+                  value={configuration.sandboxCSecret || ""} 
+                  onChange={(value) => handleFieldChange("sandboxCSecret", value)} 
                   hidden={sandboxActivationKey === 1 || isExcludedPlatform}
                 />
               </div>
@@ -511,7 +245,10 @@ const PlatformForm: React.FC = () => {
                   label="Prod Activation Key"
                   options={yesNoOptions}
                   value={prodActivationKey.toString()}
-                  onChange={(value) => setProdActivationKey(Number(value))}
+                  onChange={(value) => {
+                    setProdActivationKey(Number(value));
+                    handleFieldChange("prodActivationKey", value);
+                  }}
                 />
                 {prodActivationKey === 1 && (
                   <>
@@ -522,7 +259,10 @@ const PlatformForm: React.FC = () => {
                             name={`prodOnlineShopDomain${index}`}
                             label={`Online Shop Domain ${index + 1}`}
                             value={domain}
-                            onChange={(value) => handleDomainChange(index, value)}
+                            onChange={(value) => {
+                              handleDomainChange(index, value);
+                              handleFieldChange(`prodOnlineShopDomain${index}`, value);
+                            }}
                           />
                           <button 
                             type="button" 
@@ -556,29 +296,29 @@ const PlatformForm: React.FC = () => {
                 <TextInputField 
                   name="prodMerchant"
                   label="Prod Merchant" 
-                  value="" 
-                  onChange={() => {}} 
+                  value={configuration.prodMerchant || ""} 
+                  onChange={(value) => handleFieldChange("prodMerchant", value)} 
                   hidden={prodActivationKey === 1}
                 />
                 <TextInputField 
                   name="prodCmerchant"
                   label="Prod Cmerchant" 
-                  value="" 
-                  onChange={() => {}} 
+                  value={configuration.prodCmerchant || ""} 
+                  onChange={(value) => handleFieldChange("prodCmerchant", value)} 
                   hidden={prodActivationKey === 1}
                 />
                 <TextInputField 
                   name="prodCid"
                   label="Prod C id" 
-                  value="" 
-                  onChange={() => {}} 
+                  value={configuration.prodCid || ""} 
+                  onChange={(value) => handleFieldChange("prodCid", value)} 
                   hidden={prodActivationKey === 1}
                 />
                 <TextInputField 
                   name="prodCSecret"
                   label="Prod C Secret" 
-                  value="" 
-                  onChange={() => {}} 
+                  value={configuration.prodCSecret || ""} 
+                  onChange={(value) => handleFieldChange("prodCSecret", value)} 
                   hidden={prodActivationKey === 1}
                 />
               </div>
@@ -592,24 +332,98 @@ const PlatformForm: React.FC = () => {
                 </h4>
               </div>
               <div className={`card-body ${expandedSections.advanced ? '' : 'd-none'}`}>
-                <TextInputField name="logo" label="Logo" value="" onChange={() => {}} />
-                <SelectField name="action" options={actionOptions} label="Action" value="" onChange={() => {}} />
-                <TextInputField name="moduleVersion" label="Module version" value="" onChange={() => {}} />
-                <TextInputField name="apiRequestTimeout" label="API request timeout" value="" onChange={() => {}} />
-                <SelectField name="debugMode" options={yesNoOptions} label="Debug mode" value="" onChange={() => {}} />
-                <SelectField name="addressPassedToModals" options={addressOptions} label="Address Passed to modals" value="" onChange={() => {}} />
-                <SelectField name="errorLog" options={yesNoOptions} label="Error log" value="" onChange={() => {}} />
-                <SelectField name="widgetDisplay" options={widgetDisplayOptions} label="Widget Display" value="" onChange={() => {}} />
-                <TextInputField name="cacheTime" label="Cache time" value="" onChange={() => {}} />
-                <SelectField name="saveCard" options={yesNoOptions} label="Save card" value="" onChange={() => {}} />
-                <SelectField name="checkout" options={checkoutOptions} label="Checkout" value="" onChange={() => {}} />
-                <SelectField name="banner" options={yesNoOptions} label="Banner" value="" onChange={() => {}} />
-                <SelectField name="addressFailure" options={yesNoOptions} label="Address failure" value="" onChange={() => {}} />
+                <TextInputField 
+                  name="logo" 
+                  label="Logo" 
+                  value={configuration.logo || ""} 
+                  onChange={(value) => handleFieldChange("logo", value)} 
+                />
+                <SelectField 
+                  name="action" 
+                  options={actionOptions} 
+                  label="Action" 
+                  value={configuration.action || ""} 
+                  onChange={(value) => handleFieldChange("action", value)} 
+                />
+                <TextInputField 
+                  name="moduleVersion" 
+                  label="Module version" 
+                  value={configuration.moduleVersion || ""} 
+                  onChange={(value) => handleFieldChange("moduleVersion", value)} 
+                />
+                <TextInputField 
+                  name="apiRequestTimeout" 
+                  label="API request timeout" 
+                  value={configuration.apiRequestTimeout || ""} 
+                  onChange={(value) => handleFieldChange("apiRequestTimeout", value)} 
+                />
+                <SelectField 
+                  name="debugMode" 
+                  options={yesNoOptions} 
+                  label="Debug mode" 
+                  value={configuration.debugMode || ""} 
+                  onChange={(value) => handleFieldChange("debugMode", value)} 
+                />
+                <SelectField 
+                  name="addressPassedToModals" 
+                  options={addressOptions} 
+                  label="Address Passed to modals" 
+                  value={configuration.addressPassedToModals || ""} 
+                  onChange={(value) => handleFieldChange("addressPassedToModals", value)} 
+                />
+                <SelectField 
+                  name="errorLog" 
+                  options={yesNoOptions} 
+                  label="Error log" 
+                  value={configuration.errorLog || ""} 
+                  onChange={(value) => handleFieldChange("errorLog", value)} 
+                />
+                <SelectField 
+                  name="widgetDisplay" 
+                  options={widgetDisplayOptions} 
+                  label="Widget Display" 
+                  value={configuration.widgetDisplay || ""} 
+                  onChange={(value) => handleFieldChange("widgetDisplay", value)} 
+                />
+                <TextInputField 
+                  name="cacheTime" 
+                  label="Cache time" 
+                  value={configuration.cacheTime || ""} 
+                  onChange={(value) => handleFieldChange("cacheTime", value)} 
+                />
+                <SelectField 
+                  name="saveCard" 
+                  options={yesNoOptions} 
+                  label="Save card" 
+                  value={configuration.saveCard || ""} 
+                  onChange={(value) => handleFieldChange("saveCard", value)} 
+                />
+                <SelectField 
+                  name="checkout" 
+                  options={checkoutOptions} 
+                  label="Checkout" 
+                  value={configuration.checkout || ""} 
+                  onChange={(value) => handleFieldChange("checkout", value)} 
+                />
+                <SelectField 
+                  name="banner" 
+                  options={yesNoOptions} 
+                  label="Banner" 
+                  value={configuration.banner || ""} 
+                  onChange={(value) => handleFieldChange("banner", value)} 
+                />
+                <SelectField 
+                  name="addressFailure" 
+                  options={yesNoOptions} 
+                  label="Address failure" 
+                  value={configuration.addressFailure || ""} 
+                  onChange={(value) => handleFieldChange("addressFailure", value)} 
+                />
                 <TextAreaField 
                   name="customCss" 
                   label="Custom CSS" 
-                  value="" 
-                  onChange={() => {}} 
+                  value={configuration.customCss || ""} 
+                  onChange={(value) => handleFieldChange("customCss", value)} 
                   hidden={isExcludedPlatform}
                 />
               </div>
@@ -627,25 +441,81 @@ const PlatformForm: React.FC = () => {
                   name="displayArea"
                   label="Display Area" 
                   options={displayAreaOptions}
-                  selectedValues={[]}
-                  onChange={() => {}}
+                  selectedValues={configuration.displayArea || []}
+                  onChange={(value) => handleFieldChange("displayArea", value)}
                 />
-                <SelectField name="hook" options={hookOptions} label="Hook" value="" onChange={() => {}} />
-                <SelectField name="variable" options={yesNoOptions} label="Variable" value="" onChange={() => {}} />
-                <TextInputField name="priceSelect" label="Price select" value="" onChange={() => {}} />
-                <TextInputField name="customPriceSelect" label="Custom price select" value="" onChange={() => {}} />
-                <SelectField name="digitAvail" options={yesNoOptions} label="Digit Avail" value="" onChange={() => {}} />
-                <TextInputField name="cartButtonImageUrl" label="Cart button Image URL" value="" onChange={() => {}} />
-                <TextInputField name="altText" label="Alt text" value="" onChange={() => {}} />
+                <SelectField 
+                  name="hook" 
+                  options={hookOptions} 
+                  label="Hook" 
+                  value={configuration.hook || ""} 
+                  onChange={(value) => handleFieldChange("hook", value)} 
+                />
+                <SelectField 
+                  name="variable" 
+                  options={yesNoOptions} 
+                  label="Variable" 
+                  value={configuration.variable || ""} 
+                  onChange={(value) => handleFieldChange("variable", value)} 
+                />
+                <TextInputField 
+                  name="priceSelect" 
+                  label="Price select" 
+                  value={configuration.priceSelect || ""} 
+                  onChange={(value) => handleFieldChange("priceSelect", value)} 
+                />
+                <TextInputField 
+                  name="customPriceSelect" 
+                  label="Custom price select" 
+                  value={configuration.customPriceSelect || ""} 
+                  onChange={(value) => handleFieldChange("customPriceSelect", value)} 
+                />
+                <SelectField 
+                  name="digitAvail" 
+                  options={yesNoOptions} 
+                  label="Digit Avail" 
+                  value={configuration.digitAvail || ""} 
+                  onChange={(value) => handleFieldChange("digitAvail", value)} 
+                />
+                <TextInputField 
+                  name="cartButtonImageUrl" 
+                  label="Cart button Image URL" 
+                  value={configuration.cartButtonImageUrl || ""} 
+                  onChange={(value) => handleFieldChange("cartButtonImageUrl", value)} 
+                />
+                <TextInputField 
+                  name="altText" 
+                  label="Alt text" 
+                  value={configuration.altText || ""} 
+                  onChange={(value) => handleFieldChange("altText", value)} 
+                />
               </div>
             </div>
+
+            <button 
+              type="submit" 
+              className="btn btn-primary mb-3" 
+              style={{ height: '38px', width: '100px' }}
+            >
+              Submit
+            </button>
           </form>
         )}
 
         {activeTab === "apis" && (
           <form className="api-form">
-            <TextInputField name="prodApi" label="Prod API" value="" onChange={() => {}} />
-            <TextInputField name="sandboxApi" label="Sandbox API" value="" onChange={() => {}} />
+            <TextInputField 
+              name="prodApi" 
+              label="Prod API" 
+              value={configuration.prodApi || ""} 
+              onChange={(value) => handleFieldChange("prodApi", value)} 
+            />
+            <TextInputField 
+              name="sandboxApi" 
+              label="Sandbox API" 
+              value={configuration.sandboxApi || ""} 
+              onChange={(value) => handleFieldChange("sandboxApi", value)} 
+            />
           </form>
         )}
       </div>
