@@ -1,16 +1,18 @@
 import { useState, useEffect } from "react";
 
 interface DomainListProps {
-  onDomainsChange: (domains: string[]) => void;
+  onDomainsChange: (domains: string[], hasErrors: boolean) => void;
+  isSubmitted: boolean;
 }
 
-export default function DomainList({ onDomainsChange }: DomainListProps) {
+export default function DomainList({ onDomainsChange, isSubmitted }: DomainListProps) {
   const [domains, setDomains] = useState<string[]>([""]); // First domain always exists
   const [errors, setErrors] = useState<string[]>([""]); // Track errors separately
 
   useEffect(() => {
-    onDomainsChange(domains);
-  }, [domains, onDomainsChange]);
+    const hasErrors = domains.some((domain, index) => !domain || !!errors[index]);
+    onDomainsChange(domains, hasErrors);
+  }, [domains, errors, onDomainsChange]);
 
   const addDomain = () => {
     if (domains.length < 10) {
@@ -29,7 +31,7 @@ export default function DomainList({ onDomainsChange }: DomainListProps) {
   };
 
   const validateDomain = (value: string): string => {
-    if (value === "") return ""; // No error for empty input
+    if (value === "") return ""; // No error initially
     if (!/^https?:\/\/|www\./.test(value)) {
       return "Domain must start with 'https://', 'http://', or 'www.'";
     }
@@ -57,7 +59,9 @@ export default function DomainList({ onDomainsChange }: DomainListProps) {
               placeholder="Enter domain"
               value={domain}
               onChange={e => handleChange(index, e.target.value)}
-              className={`flex-1 p-2 border rounded-md ${errors[index] ? "border-red-500" : "border-gray-300"}`}
+              className={`flex-1 p-2 border rounded-md ${
+                errors[index] || (isSubmitted && !domain) ? "border-red-500" : "border-gray-300"
+              }`}
             />
             {index > 0 && (
               <button
@@ -68,7 +72,9 @@ export default function DomainList({ onDomainsChange }: DomainListProps) {
               </button>
             )}
           </div>
-          {errors[index] && <p className="text-red-500 text-sm">{errors[index]}</p>}
+          {(errors[index] || (isSubmitted && !domain)) && (
+            <p className="text-red-500 text-sm">{errors[index] || "This field is required"}</p>
+          )}
         </div>
       ))}
 
