@@ -1,8 +1,4 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { Trash2 } from "lucide-react";
 
 interface Domain {
   id: number;
@@ -36,23 +32,31 @@ export default function DomainList() {
   return (
     <div className="p-4 space-y-4">
       {domains.map(domain => (
-        <Card key={domain.id} className="p-4 flex flex-col gap-2">
+        <div key={domain.id} className="p-4 border rounded-md space-y-2">
           <div className="flex items-center gap-4">
-            <Input
+            <input
               type="text"
               placeholder="Enter domain"
               value={domain.value}
               onChange={e => handleChange(domain.id, e.target.value)}
-              className={`flex-1 ${domain.error ? "border-red-500" : ""}`}
+              className={`flex-1 p-2 border rounded-md ${domain.error ? "border-red-500" : "border-gray-300"}`}
             />
-            <Button variant="destructive" onClick={() => removeDomain(domain.id)}>
-              <Trash2 className="w-4 h-4" />
-            </Button>
+            <button
+              onClick={() => removeDomain(domain.id)}
+              className="text-red-500 text-lg p-2 rounded hover:bg-red-100"
+            >
+              ❌
+            </button>
           </div>
           {domain.error && <p className="text-red-500 text-sm">{domain.error}</p>}
-        </Card>
+        </div>
       ))}
-      <Button onClick={addDomain}>Add More</Button>
+      <button
+        onClick={addDomain}
+        className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+      >
+        Add More
+      </button>
     </div>
   );
 }
