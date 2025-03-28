@@ -1,526 +1,58 @@
-import React, { useState } from "react";
-import { useSelector, useDispatch } from "react-redux";
-import { RootState, AppDispatch } from "../store";
-import { updateField } from "../store/platformSlice";
-import TextInputField from "../fields/TextInputField";
-import SelectField from "../fields/SelectField";
-import MultiSelectField from "../fields/MultiSelectField";
-import TextAreaField from "../fields/TextAreaField";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import { Trash2 } from "lucide-react";
 
-const PlatformForm: React.FC = () => {
-  const { configuration, updatedFields } = useSelector((state: RootState) => state.platform);
-  const dispatch: AppDispatch = useDispatch();
-  const [activeTab, setActiveTab] = useState("settings");
-  const [isSandbox, setIsSandbox] = useState(0);
-  const [sandboxActivationKey, setSandboxActivationKey] = useState(0);
-  const [prodActivationKey, setProdActivationKey] = useState(0);
-  const [onlineShopDomains, setOnlineShopDomains] = useState<string[]>([""]);
-  const [expandedSections, setExpandedSections] = useState({
-    advanced: false,
-    marketing: false
-  });
+interface Domain {
+  id: number;
+  value: string;
+  error: string;
+}
 
-  const yesNoOptions = [
-    { value: "0", label: "No" },
-    { value: "1", label: "Yes" }
-  ];
+export default function DomainList() {
+  const [domains, setDomains] = useState<Domain[]>([]);
 
-  const actionOptions = [
-    { value: "AU", label: "AU" },
-    { value: "CA", label: "CA" }
-  ];
-
-  const addressOptions = [
-    { value: "billing", label: "Billing" },
-    { value: "shipping", label: "Shipping" }
-  ];
-
-  const widgetDisplayOptions = [
-    { value: "remote", label: "Remote" },
-    { value: "local", label: "Local" }
-  ];
-
-  const checkoutOptions = [
-    { value: "Overlay", label: "Overlay" },
-    { value: "Redirect", label: "Redirect" }
-  ];
-
-  const hookOptions = [
-    { value: "before", label: "Before" },
-    { value: "after", label: "After" }
-  ];
-
-  const displayAreaOptions = [
-    { value: "All", label: "All" },
-    { value: "PDP", label: "PDP" },
-    { value: "PLP", label: "PLP" },
-    { value: "Cart", label: "Cart" },
-    { value: "Checkout", label: "Checkout" }
-  ];
-
-  const handleAddDomain = () => {
-    setOnlineShopDomains([...onlineShopDomains, ""]);
+  const addDomain = () => {
+    setDomains([...domains, { id: Date.now(), value: "", error: "" }]);
   };
 
-  const handleRemoveDomain = (index: number) => {
-    setOnlineShopDomains(onlineShopDomains.filter((_, i) => i !== index));
+  const removeDomain = (id: number) => {
+    setDomains(domains.filter(domain => domain.id !== id));
   };
 
-  const handleDomainChange = (index: number, value: string) => {
-    const newDomains = [...onlineShopDomains];
-    newDomains[index] = value;
-    setOnlineShopDomains(newDomains);
+  const validateDomain = (value: string): string => {
+    if (!/^https?:\/\/|www\./.test(value)) {
+      return "Domain must start with 'https://', 'http://', or 'www.'";
+    }
+    return "";
   };
 
-  const handleActivate = () => {
-    // API call logic here
-  };
-
-  const toggleSection = (section: 'advanced' | 'marketing') => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [section]: !prev[section]
-    }));
-  };
-
-  const isExcludedPlatform = ["magento", "shopify", "bigcommerce"].includes(configuration.platform);
-
-  const handleSubmit = () => {
-    const data = {
-      data: {
-        platform: configuration.platform,
-        configuration: updatedFields
-      }
-    };
-    alert(JSON.stringify(data));
-    window.parent.postMessage(data, '*');
-  };
-
-  const handleFieldChange = (field: string, value: any) => {
-    dispatch(updateField({ field, value }));
+  const handleChange = (id: number, value: string) => {
+    const error = validateDomain(value);
+    setDomains(domains.map(domain => (domain.id === id ? { ...domain, value, error } : domain)));
   };
 
   return (
-    <div className="container py-4 d-flex justify-content-center">
-      <div className="col-md-8">
-        <div className="nav nav-tabs mb-4">
-          <button 
-            onClick={() => setActiveTab("settings")}
-            className={`nav-link ${activeTab === "settings" ? "active" : ""}`}
-          >
-            Settings
-          </button>
-          <button 
-            onClick={() => setActiveTab("apis")}
-            className={`nav-link ${activeTab === "apis" ? "active" : ""}`}
-          >
-            APIs
-          </button>
-        </div>
-
-        {activeTab === "settings" && (
-          <form className="settings-form" onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
-            <SelectField
-              name="enabled"
-              label="Enabled"
-              options={yesNoOptions}
-              value={configuration.enabled || ""}
-              onChange={(value) => handleFieldChange("enabled", value)}
+    <div className="p-4 space-y-4">
+      {domains.map(domain => (
+        <Card key={domain.id} className="p-4 flex flex-col gap-2">
+          <div className="flex items-center gap-4">
+            <Input
+              type="text"
+              placeholder="Enter domain"
+              value={domain.value}
+              onChange={e => handleChange(domain.id, e.target.value)}
+              className={`flex-1 ${domain.error ? "border-red-500" : ""}`}
             />
-            <TextInputField
-              name="title"
-              label="Title"
-              value={configuration.title || ""}
-              onChange={(value) => handleFieldChange("title", value)}
-            />
-            <SelectField
-              name="isSandbox"
-              label="Is Sandbox"
-              options={yesNoOptions}
-              value={isSandbox.toString()}
-              onChange={(value) => {
-                setIsSandbox(Number(value));
-                handleFieldChange("isSandbox", value);
-              }}
-            />
-
-            {isSandbox === 1 && (
-              <div className="card mb-4 p-3">
-                <SelectField
-                  name="sandboxActivationKey"
-                  label="Sandbox Activation Key"
-                  options={yesNoOptions}
-                  value={sandboxActivationKey.toString()}
-                  onChange={(value) => {
-                    setSandboxActivationKey(Number(value));
-                    handleFieldChange("sandboxActivationKey", value);
-                  }}
-                />
-                {sandboxActivationKey === 1 && (
-                  <>
-                    <TextInputField
-                      name="sandboxActivationKeyValue"
-                      label="Sandbox Activation Key"
-                      value={configuration.sandboxActivationKeyValue || ""}
-                      onChange={(value) => handleFieldChange("sandboxActivationKeyValue", value)}
-                      hidden={isExcludedPlatform}
-                    />
-                    <div className="card mb-4 p-3">
-                      {onlineShopDomains.map((domain, index) => (
-                        <div key={index} className="input-group mb-3">
-                          <TextInputField
-                            name={`onlineShopDomain${index}`}
-                            label={`Online Shop Domain ${index + 1}`}
-                            value={domain}
-                            onChange={(value) => {
-                              handleDomainChange(index, value);
-                              handleFieldChange(`onlineShopDomain${index}`, value);
-                            }}
-                            hidden={isExcludedPlatform}
-                          />
-                          <button 
-                            type="button" 
-                            className="btn btn-danger" 
-                            onClick={() => handleRemoveDomain(index)}
-                            style={{ height: '38px', width: '100px' }}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ))}
-                      <button 
-                        type="button" 
-                        className="btn btn-primary mb-3" 
-                        onClick={handleAddDomain}
-                        style={{ height: '38px', width: '100px' }}
-                      >
-                        Add More
-                      </button>
-                      <button 
-                        type="button" 
-                        className="btn btn-success" 
-                        onClick={handleActivate}
-                        style={{ height: '38px', width: '100px' }}
-                      >
-                        Activate
-                      </button>
-                    </div>
-                  </>
-                )}
-                <TextInputField 
-                  name="sandboxMerchant"
-                  label="Sandbox Merchant" 
-                  value={configuration.sandboxMerchant || ""} 
-                  onChange={(value) => handleFieldChange("sandboxMerchant", value)} 
-                  hidden={sandboxActivationKey === 1 || isExcludedPlatform}
-                />
-                <TextInputField 
-                  name="sandboxCmerchant"
-                  label="Sandbox Cmerchant" 
-                  value={configuration.sandboxCmerchant || ""} 
-                  onChange={(value) => handleFieldChange("sandboxCmerchant", value)} 
-                  hidden={sandboxActivationKey === 1 || isExcludedPlatform}
-                />
-                <TextInputField 
-                  name="sandboxCid"
-                  label="Sandbox C id" 
-                  value={configuration.sandboxCid || ""} 
-                  onChange={(value) => handleFieldChange("sandboxCid", value)} 
-                  hidden={sandboxActivationKey === 1 || isExcludedPlatform}
-                />
-                <TextInputField 
-                  name="sandboxCSecret"
-                  label="Sandbox C Secret" 
-                  value={configuration.sandboxCSecret || ""} 
-                  onChange={(value) => handleFieldChange("sandboxCSecret", value)} 
-                  hidden={sandboxActivationKey === 1 || isExcludedPlatform}
-                />
-              </div>
-            )}
-
-            {isSandbox === 0 && (
-              <div className="card mb-4 p-3">
-                <SelectField
-                  name="prodActivationKey"
-                  label="Prod Activation Key"
-                  options={yesNoOptions}
-                  value={prodActivationKey.toString()}
-                  onChange={(value) => {
-                    setProdActivationKey(Number(value));
-                    handleFieldChange("prodActivationKey", value);
-                  }}
-                />
-                {prodActivationKey === 1 && (
-                  <>
-                    <div className="card mb-4 p-3">
-                      {onlineShopDomains.map((domain, index) => (
-                        <div key={index} className="input-group mb-3">
-                          <TextInputField
-                            name={`prodOnlineShopDomain${index}`}
-                            label={`Online Shop Domain ${index + 1}`}
-                            value={domain}
-                            onChange={(value) => {
-                              handleDomainChange(index, value);
-                              handleFieldChange(`prodOnlineShopDomain${index}`, value);
-                            }}
-                          />
-                          <button 
-                            type="button" 
-                            className="btn btn-danger" 
-                            onClick={() => handleRemoveDomain(index)}
-                            style={{ height: '38px', width: '100px' }}
-                          >
-                            Remove
-                          </button>
-                        </div>
-                      ))}
-                      <button 
-                        type="button" 
-                        className="btn btn-primary mb-3" 
-                        onClick={handleAddDomain}
-                        style={{ height: '38px', width: '100px' }}
-                      >
-                        Add More
-                      </button>
-                      <button 
-                        type="button" 
-                        className="btn btn-success" 
-                        onClick={handleActivate}
-                        style={{ height: '38px', width: '100px' }}
-                      >
-                        Activate
-                      </button>
-                    </div>
-                  </>
-                )}
-                <TextInputField 
-                  name="prodMerchant"
-                  label="Prod Merchant" 
-                  value={configuration.prodMerchant || ""} 
-                  onChange={(value) => handleFieldChange("prodMerchant", value)} 
-                  hidden={prodActivationKey === 1}
-                />
-                <TextInputField 
-                  name="prodCmerchant"
-                  label="Prod Cmerchant" 
-                  value={configuration.prodCmerchant || ""} 
-                  onChange={(value) => handleFieldChange("prodCmerchant", value)} 
-                  hidden={prodActivationKey === 1}
-                />
-                <TextInputField 
-                  name="prodCid"
-                  label="Prod C id" 
-                  value={configuration.prodCid || ""} 
-                  onChange={(value) => handleFieldChange("prodCid", value)} 
-                  hidden={prodActivationKey === 1}
-                />
-                <TextInputField 
-                  name="prodCSecret"
-                  label="Prod C Secret" 
-                  value={configuration.prodCSecret || ""} 
-                  onChange={(value) => handleFieldChange("prodCSecret", value)} 
-                  hidden={prodActivationKey === 1}
-                />
-              </div>
-            )}
-
-            <div className="card mb-4">
-              <div className="card-header" onClick={() => toggleSection('advanced')} style={{cursor: 'pointer'}}>
-                <h4 className="mb-0 d-flex justify-content-between align-items-center">
-                  Advanced Settings
-                  <span>{expandedSections.advanced ? '▼' : '▶'}</span>
-                </h4>
-              </div>
-              <div className={`card-body ${expandedSections.advanced ? '' : 'd-none'}`}>
-                <TextInputField 
-                  name="logo" 
-                  label="Logo" 
-                  value={configuration.logo || ""} 
-                  onChange={(value) => handleFieldChange("logo", value)} 
-                />
-                <SelectField 
-                  name="action" 
-                  options={actionOptions} 
-                  label="Action" 
-                  value={configuration.action || ""} 
-                  onChange={(value) => handleFieldChange("action", value)} 
-                />
-                <TextInputField 
-                  name="moduleVersion" 
-                  label="Module version" 
-                  value={configuration.moduleVersion || ""} 
-                  onChange={(value) => handleFieldChange("moduleVersion", value)} 
-                />
-                <TextInputField 
-                  name="apiRequestTimeout" 
-                  label="API request timeout" 
-                  value={configuration.apiRequestTimeout || ""} 
-                  onChange={(value) => handleFieldChange("apiRequestTimeout", value)} 
-                />
-                <SelectField 
-                  name="debugMode" 
-                  options={yesNoOptions} 
-                  label="Debug mode" 
-                  value={configuration.debugMode || ""} 
-                  onChange={(value) => handleFieldChange("debugMode", value)} 
-                />
-                <SelectField 
-                  name="addressPassedToModals" 
-                  options={addressOptions} 
-                  label="Address Passed to modals" 
-                  value={configuration.addressPassedToModals || ""} 
-                  onChange={(value) => handleFieldChange("addressPassedToModals", value)} 
-                />
-                <SelectField 
-                  name="errorLog" 
-                  options={yesNoOptions} 
-                  label="Error log" 
-                  value={configuration.errorLog || ""} 
-                  onChange={(value) => handleFieldChange("errorLog", value)} 
-                />
-                <SelectField 
-                  name="widgetDisplay" 
-                  options={widgetDisplayOptions} 
-                  label="Widget Display" 
-                  value={configuration.widgetDisplay || ""} 
-                  onChange={(value) => handleFieldChange("widgetDisplay", value)} 
-                />
-                <TextInputField 
-                  name="cacheTime" 
-                  label="Cache time" 
-                  value={configuration.cacheTime || ""} 
-                  onChange={(value) => handleFieldChange("cacheTime", value)} 
-                />
-                <SelectField 
-                  name="saveCard" 
-                  options={yesNoOptions} 
-                  label="Save card" 
-                  value={configuration.saveCard || ""} 
-                  onChange={(value) => handleFieldChange("saveCard", value)} 
-                />
-                <SelectField 
-                  name="checkout" 
-                  options={checkoutOptions} 
-                  label="Checkout" 
-                  value={configuration.checkout || ""} 
-                  onChange={(value) => handleFieldChange("checkout", value)} 
-                />
-                <SelectField 
-                  name="banner" 
-                  options={yesNoOptions} 
-                  label="Banner" 
-                  value={configuration.banner || ""} 
-                  onChange={(value) => handleFieldChange("banner", value)} 
-                />
-                <SelectField 
-                  name="addressFailure" 
-                  options={yesNoOptions} 
-                  label="Address failure" 
-                  value={configuration.addressFailure || ""} 
-                  onChange={(value) => handleFieldChange("addressFailure", value)} 
-                />
-                <TextAreaField 
-                  name="customCss" 
-                  label="Custom CSS" 
-                  value={configuration.customCss || ""} 
-                  onChange={(value) => handleFieldChange("customCss", value)} 
-                  hidden={isExcludedPlatform}
-                />
-              </div>
-            </div>
-
-            <div className="card mb-4">
-              <div className="card-header" onClick={() => toggleSection('marketing')} style={{cursor: 'pointer'}}>
-                <h4 className="mb-0 d-flex justify-content-between align-items-center">
-                  Advanced Marketing
-                  <span>{expandedSections.marketing ? '▼' : '▶'}</span>
-                </h4>
-              </div>
-              <div className={`card-body ${expandedSections.marketing ? '' : 'd-none'}`}>
-                <MultiSelectField 
-                  name="displayArea"
-                  label="Display Area" 
-                  options={displayAreaOptions}
-                  selectedValues={configuration.displayArea || []}
-                  onChange={(value) => handleFieldChange("displayArea", value)}
-                />
-                <SelectField 
-                  name="hook" 
-                  options={hookOptions} 
-                  label="Hook" 
-                  value={configuration.hook || ""} 
-                  onChange={(value) => handleFieldChange("hook", value)} 
-                />
-                <SelectField 
-                  name="variable" 
-                  options={yesNoOptions} 
-                  label="Variable" 
-                  value={configuration.variable || ""} 
-                  onChange={(value) => handleFieldChange("variable", value)} 
-                />
-                <TextInputField 
-                  name="priceSelect" 
-                  label="Price select" 
-                  value={configuration.priceSelect || ""} 
-                  onChange={(value) => handleFieldChange("priceSelect", value)} 
-                />
-                <TextInputField 
-                  name="customPriceSelect" 
-                  label="Custom price select" 
-                  value={configuration.customPriceSelect || ""} 
-                  onChange={(value) => handleFieldChange("customPriceSelect", value)} 
-                />
-                <SelectField 
-                  name="digitAvail" 
-                  options={yesNoOptions} 
-                  label="Digit Avail" 
-                  value={configuration.digitAvail || ""} 
-                  onChange={(value) => handleFieldChange("digitAvail", value)} 
-                />
-                <TextInputField 
-                  name="cartButtonImageUrl" 
-                  label="Cart button Image URL" 
-                  value={configuration.cartButtonImageUrl || ""} 
-                  onChange={(value) => handleFieldChange("cartButtonImageUrl", value)} 
-                />
-                <TextInputField 
-                  name="altText" 
-                  label="Alt text" 
-                  value={configuration.altText || ""} 
-                  onChange={(value) => handleFieldChange("altText", value)} 
-                />
-              </div>
-            </div>
-
-            <button 
-              type="submit" 
-              className="btn btn-primary mb-3" 
-              style={{ height: '38px', width: '100px' }}
-            >
-              Submit
-            </button>
-          </form>
-        )}
-
-        {activeTab === "apis" && (
-          <form className="api-form">
-            <TextInputField 
-              name="prodApi" 
-              label="Prod API" 
-              value={configuration.prodApi || ""} 
-              onChange={(value) => handleFieldChange("prodApi", value)} 
-            />
-            <TextInputField 
-              name="sandboxApi" 
-              label="Sandbox API" 
-              value={configuration.sandboxApi || ""} 
-              onChange={(value) => handleFieldChange("sandboxApi", value)} 
-            />
-          </form>
-        )}
-      </div>
+            <Button variant="destructive" onClick={() => removeDomain(domain.id)}>
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </div>
+          {domain.error && <p className="text-red-500 text-sm">{domain.error}</p>}
+        </Card>
+      ))}
+      <Button onClick={addDomain}>Add More</Button>
     </div>
   );
-};
-
-export default PlatformForm;
+}
