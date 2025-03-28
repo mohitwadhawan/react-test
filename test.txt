@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface Domain {
   id: number;
@@ -6,15 +6,31 @@ interface Domain {
   error: string;
 }
 
-export default function DomainList() {
-  const [domains, setDomains] = useState<Domain[]>([]);
+interface DomainListProps {
+  onDomainsChange: (domains: Domain[]) => void; // Prop for parent
+}
+
+export default function DomainList({ onDomainsChange }: DomainListProps) {
+  const [domains, setDomains] = useState<Domain[]>([
+    { id: Date.now(), value: "", error: "" } // First domain always exists
+  ]);
+
+  useEffect(() => {
+    onDomainsChange(domains); // Notify parent whenever domains change
+  }, [domains, onDomainsChange]);
 
   const addDomain = () => {
-    setDomains([...domains, { id: Date.now(), value: "", error: "" }]);
+    if (domains.length < 10) {
+      const newDomains = [...domains, { id: Date.now(), value: "", error: "" }];
+      setDomains(newDomains);
+    }
   };
 
   const removeDomain = (id: number) => {
-    setDomains(domains.filter(domain => domain.id !== id));
+    if (domains.length > 1) {
+      const newDomains = domains.filter(domain => domain.id !== id);
+      setDomains(newDomains);
+    }
   };
 
   const validateDomain = (value: string): string => {
@@ -25,13 +41,15 @@ export default function DomainList() {
   };
 
   const handleChange = (id: number, value: string) => {
-    const error = validateDomain(value);
-    setDomains(domains.map(domain => (domain.id === id ? { ...domain, value, error } : domain)));
+    const newDomains = domains.map(domain =>
+      domain.id === id ? { ...domain, value, error: validateDomain(value) } : domain
+    );
+    setDomains(newDomains);
   };
 
   return (
     <div className="p-4 space-y-4">
-      {domains.map(domain => (
+      {domains.map((domain, index) => (
         <div key={domain.id} className="p-4 border rounded-md space-y-2">
           <div className="flex items-center gap-4">
             <input
@@ -41,19 +59,23 @@ export default function DomainList() {
               onChange={e => handleChange(domain.id, e.target.value)}
               className={`flex-1 p-2 border rounded-md ${domain.error ? "border-red-500" : "border-gray-300"}`}
             />
-            <button
-              onClick={() => removeDomain(domain.id)}
-              className="text-red-500 text-lg p-2 rounded hover:bg-red-100"
-            >
-              ❌
-            </button>
+            {index > 0 && ( // First domain cannot be removed
+              <button
+                onClick={() => removeDomain(domain.id)}
+                className="text-red-500 text-lg p-2 rounded hover:bg-red-100"
+              >
+                ❌
+              </button>
+            )}
           </div>
           {domain.error && <p className="text-red-500 text-sm">{domain.error}</p>}
         </div>
       ))}
+
       <button
         onClick={addDomain}
-        className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+        disabled={domains.length >= 10}
+        className={`p-2 rounded-md text-white ${domains.length >= 10 ? "bg-gray-400 cursor-not-allowed" : "bg-blue-500 hover:bg-blue-600"}`}
       >
         Add More
       </button>
