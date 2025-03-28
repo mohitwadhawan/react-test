@@ -1,34 +1,25 @@
 import { useState, useEffect } from "react";
 
-interface Domain {
-  id: number;
-  value: string;
-  error: string;
-}
-
 interface DomainListProps {
-  onDomainsChange: (domains: Domain[]) => void; // Prop for parent
+  onDomainsChange: (domains: string[]) => void; // Parent callback
 }
 
 export default function DomainList({ onDomainsChange }: DomainListProps) {
-  const [domains, setDomains] = useState<Domain[]>([
-    { id: Date.now(), value: "", error: "" } // First domain always exists
-  ]);
+  const [domains, setDomains] = useState<string[]>([""]); // First domain always exists
 
   useEffect(() => {
-    onDomainsChange(domains); // Notify parent whenever domains change
+    onDomainsChange(domains); // Notify parent on change
   }, [domains, onDomainsChange]);
 
   const addDomain = () => {
     if (domains.length < 10) {
-      const newDomains = [...domains, { id: Date.now(), value: "", error: "" }];
-      setDomains(newDomains);
+      setDomains([...domains, ""]);
     }
   };
 
-  const removeDomain = (id: number) => {
+  const removeDomain = (index: number) => {
     if (domains.length > 1) {
-      const newDomains = domains.filter(domain => domain.id !== id);
+      const newDomains = domains.filter((_, i) => i !== index);
       setDomains(newDomains);
     }
   };
@@ -40,35 +31,34 @@ export default function DomainList({ onDomainsChange }: DomainListProps) {
     return "";
   };
 
-  const handleChange = (id: number, value: string) => {
-    const newDomains = domains.map(domain =>
-      domain.id === id ? { ...domain, value, error: validateDomain(value) } : domain
-    );
+  const handleChange = (index: number, value: string) => {
+    const newDomains = [...domains];
+    newDomains[index] = value;
     setDomains(newDomains);
   };
 
   return (
     <div className="p-4 space-y-4">
       {domains.map((domain, index) => (
-        <div key={domain.id} className="p-4 border rounded-md space-y-2">
+        <div key={index} className="p-4 border rounded-md space-y-2">
           <div className="flex items-center gap-4">
             <input
               type="text"
               placeholder="Enter domain"
-              value={domain.value}
-              onChange={e => handleChange(domain.id, e.target.value)}
-              className={`flex-1 p-2 border rounded-md ${domain.error ? "border-red-500" : "border-gray-300"}`}
+              value={domain}
+              onChange={e => handleChange(index, e.target.value)}
+              className={`flex-1 p-2 border rounded-md ${validateDomain(domain) ? "border-red-500" : "border-gray-300"}`}
             />
-            {index > 0 && ( // First domain cannot be removed
+            {index > 0 && (
               <button
-                onClick={() => removeDomain(domain.id)}
+                onClick={() => removeDomain(index)}
                 className="text-red-500 text-lg p-2 rounded hover:bg-red-100"
               >
                 ❌
               </button>
             )}
           </div>
-          {domain.error && <p className="text-red-500 text-sm">{domain.error}</p>}
+          {validateDomain(domain) && <p className="text-red-500 text-sm">{validateDomain(domain)}</p>}
         </div>
       ))}
 
