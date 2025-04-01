@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 
 interface DomainListProps {
+  initialDomains?: string[];
   onDomainsChange: (domains: string[], hasErrors: boolean) => void;
   isSubmitted: boolean;
 }
 
-export default function DomainList({ onDomainsChange, isSubmitted }: DomainListProps) {
-  const [domains, setDomains] = useState<string[]>([""]); // First domain always exists
-  const [errors, setErrors] = useState<string[]>([""]); // Track errors separately
+export default function DomainList({ initialDomains = [""], onDomainsChange, isSubmitted }: DomainListProps) {
+  const [domains, setDomains] = useState<string[]>(initialDomains.length > 0 ? initialDomains : [""]);
+  const [errors, setErrors] = useState<string[]>(initialDomains.map(domain => validateDomain(domain)));
 
   useEffect(() => {
     const hasErrors = domains.some((domain, index) => !domain || !!errors[index]);
@@ -30,13 +31,13 @@ export default function DomainList({ onDomainsChange, isSubmitted }: DomainListP
     }
   };
 
-  const validateDomain = (value: string): string => {
+  function validateDomain(value: string): string {
     if (value === "") return ""; // No error initially
     if (!/^https?:\/\/|www\./.test(value)) {
       return "Domain must start with 'https://', 'http://', or 'www.'";
     }
     return "";
-  };
+  }
 
   const handleChange = (index: number, value: string) => {
     const newDomains = [...domains];
