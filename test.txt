@@ -88,4 +88,251 @@ export default function DomainList({ initialDomains = [""], onDomainsChange, isS
       </button>
     </div>
   );
-}
+}import React from "react";
+import { render, screen, fireEvent } from "@testing-library/react";
+import Tooltip from "../Tooltip"; // Adjust path as needed
+
+describe("Tooltip Component", () => {
+  const text = "Tooltip Text";
+  const image = "test-image.png";
+
+  test("renders tooltip icon", () => {
+    render(<Tooltip text={text} image={image} />);
+
+    // Check if image is rendered
+    const imgElement = screen.getByAltText("Tooltip-icon");
+    expect(imgElement).toBeInTheDocument();
+    expect(imgElement).toHaveAttribute("src", image);
+  });
+
+  test("does not show tooltip text initially", () => {
+    render(<Tooltip text={text} image={image} />);
+
+    // Tooltip text should not be visible initially
+    const tooltipText = screen.queryByText(text);
+    expect(tooltipText).not.toBeInTheDocument();
+  });
+
+  test("shows tooltip text on hover", () => {
+    render(<Tooltip text={text} image={image} />);
+
+    // Simulate mouse enter
+    const imgElement = screen.getByAltText("Tooltip-icon");
+    fireEvent.mouseEnter(imgElement);
+
+    // Tooltip should now be visible
+    expect(screen.getByText(text)).toBeInTheDocument();
+  });
+
+  test("hides tooltip text on mouse leave", () => {
+    render(<Tooltip text={text} image={image} />);
+
+    const imgElement = screen.getByAltText("Tooltip-icon");
+    
+    // Simulate hover
+    fireEvent.mouseEnter(imgElement);
+    expect(screen.getByText(text)).toBeInTheDocument();
+
+    // Simulate mouse leave
+    fireEvent.mouseLeave(imgElement);
+    expect(screen.queryByText(text)).not.toBeInTheDocument();
+  });
+
+  test("renders without an image (edge case)", () => {
+    render(<Tooltip text={text} image="" />);
+    
+    // Image should not be in the document
+    expect(screen.queryByAltText("Tooltip-icon")).not.toBeInTheDocument();
+  });
+});
+
+
+
+
+import React from "react";
+import { render, screen, fireEvent } from "@testing-library/react";
+import Tooltip from "../Tooltip"; // Adjust path as needed
+
+describe("Tooltip Component", () => {
+  const text = "Tooltip Text";
+  const image = "test-image.png";
+
+  test("renders tooltip icon", () => {
+    render(<Tooltip text={text} image={image} />);
+
+    // Check if image is rendered
+    const imgElement = screen.getByAltText("Tooltip-icon");
+    expect(imgElement).toBeInTheDocument();
+    expect(imgElement).toHaveAttribute("src", image);
+  });
+
+  test("does not show tooltip text initially", () => {
+    render(<Tooltip text={text} image={image} />);
+
+    // Tooltip text should not be visible initially
+    const tooltipText = screen.queryByText(text);
+    expect(tooltipText).not.toBeInTheDocument();
+  });
+
+  test("shows tooltip text on hover", () => {
+    render(<Tooltip text={text} image={image} />);
+
+    // Simulate mouse enter
+    const imgElement = screen.getByAltText("Tooltip-icon");
+    fireEvent.mouseEnter(imgElement);
+
+    // Tooltip should now be visible
+    expect(screen.getByText(text)).toBeInTheDocument();
+  });
+
+  test("hides tooltip text on mouse leave", () => {
+    render(<Tooltip text={text} image={image} />);
+
+    const imgElement = screen.getByAltText("Tooltip-icon");
+    
+    // Simulate hover
+    fireEvent.mouseEnter(imgElement);
+    expect(screen.getByText(text)).toBeInTheDocument();
+
+    // Simulate mouse leave
+    fireEvent.mouseLeave(imgElement);
+    expect(screen.queryByText(text)).not.toBeInTheDocument();
+  });
+
+  test("renders without an image (edge case)", () => {
+    render(<Tooltip text={text} image="" />);
+    
+    // Image should not be in the document
+    expect(screen.queryByAltText("Tooltip-icon")).not.toBeInTheDocument();
+  });
+});
+
+
+
+import React from "react";
+import { render, screen, fireEvent } from "@testing-library/react";
+import TooltipRadio from "../TooltipRadio"; // Adjust path as needed
+
+describe("TooltipRadio Component", () => {
+  const text = "Tooltip Text";
+  const image = "test-image.png";
+
+  test("renders tooltip icon", () => {
+    render(<TooltipRadio text={text} image={image} />);
+
+    // Check if image is rendered
+    const imgElement = screen.getByAltText("Tooltip-icon");
+    expect(imgElement).toBeInTheDocument();
+    expect(imgElement).toHaveAttribute("src", image);
+  });
+
+  test("does not show tooltip text initially", () => {
+    render(<TooltipRadio text={text} image={image} />);
+
+    // Tooltip text should not be visible initially
+    const tooltipText = screen.queryByText(text);
+    expect(tooltipText).not.toBeInTheDocument();
+  });
+
+  test("shows tooltip text on hover", () => {
+    render(<TooltipRadio text={text} image={image} />);
+
+    // Simulate mouse enter
+    const imgElement = screen.getByAltText("Tooltip-icon");
+    fireEvent.mouseEnter(imgElement);
+
+    // Tooltip should now be visible
+    expect(screen.getByText(text)).toBeInTheDocument();
+  });
+
+  test("hides tooltip text on mouse leave", () => {
+    render(<TooltipRadio text={text} image={image} />);
+
+    const imgElement = screen.getByAltText("Tooltip-icon");
+    
+    // Simulate hover
+    fireEvent.mouseEnter(imgElement);
+    expect(screen.getByText(text)).toBeInTheDocument();
+
+    // Simulate mouse leave
+    fireEvent.mouseLeave(imgElement);
+    expect(screen.queryByText(text)).not.toBeInTheDocument();
+  });
+
+  test("renders without an image (edge case)", () => {
+    render(<TooltipRadio text={text} image="" />);
+    
+    // Image should not be in the document
+    expect(screen.queryByAltText("Tooltip-icon")).not.toBeInTheDocument();
+  });
+});
+
+
+import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import TextInputField from './TextInputField';
+
+describe('TextInputField Component', () => {
+  const setup = (props = {}) => {
+    return render(<TextInputField label="Test Label" name="testInput" {...props} />);
+  };
+
+  test('renders the input field with label', () => {
+    setup();
+    expect(screen.getByText('Test Label')).toBeInTheDocument();
+    expect(screen.getByRole('textbox')).toBeInTheDocument();
+  });
+
+  test('displays an error when required field is left empty', () => {
+    setup({ required: true });
+    
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: '' } });
+    fireEvent.blur(input);
+
+    expect(screen.getByText(/field is Invalid/i)).toBeInTheDocument();
+  });
+
+  test('displays an error when input length is less than minimum required', () => {
+    setup({ minLength: 5 });
+
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: 'abc' } });
+    fireEvent.blur(input);
+
+    expect(screen.getByText(/length of Partner id must be at least/i)).toBeInTheDocument();
+  });
+
+  test('calls onChange when typing in the input', () => {
+    const handleChange = jest.fn();
+    setup({ onChange: handleChange });
+
+    const input = screen.getByRole('textbox');
+    fireEvent.change(input, { target: { value: 'New Value' } });
+
+    expect(handleChange).toHaveBeenCalledTimes(1);
+    expect(handleChange).toHaveBeenCalledWith('New Value');
+  });
+
+  test('calls onFocus and onBlur events', () => {
+    const handleFocus = jest.fn();
+    const handleBlur = jest.fn();
+    setup({ onFocus: handleFocus, onBlur: handleBlur });
+
+    const input = screen.getByRole('textbox');
+    
+    fireEvent.focus(input);
+    expect(handleFocus).toHaveBeenCalledTimes(1);
+
+    fireEvent.blur(input);
+    expect(handleBlur).toHaveBeenCalledTimes(1);
+  });
+
+  test('disables input when disabled prop is true', () => {
+    setup({ disabled: true });
+
+    const input = screen.getByRole('textbox');
+    expect(input).toBeDisabled();
+  });
+
+});
