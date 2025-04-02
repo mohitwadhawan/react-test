@@ -336,3 +336,96 @@ describe('TextInputField Component', () => {
   });
 
 });
+
+
+==========
+import messageReducer, { setMessageData } from './messageSlice';
+
+describe('messageSlice reducer', () => {
+  const initialState = { responseData: {} };
+
+  test('should return the initial state when passed an unknown action', () => {
+    expect(messageReducer(undefined, { type: 'unknown' })).toEqual(initialState);
+  });
+
+  test('should handle setMessageData action', () => {
+    const payload = { key: 'value' };
+    const action = setMessageData(payload);
+    const expectedState = { responseData: payload };
+
+    expect(messageReducer(initialState, action)).toEqual(expectedState);
+  });
+
+  test('should correctly update responseData when setMessageData is dispatched', () => {
+    const previousState = { responseData: { oldKey: 'oldValue' } };
+    const newPayload = { newKey: 'newValue' };
+    
+    const newState = messageReducer(previousState, setMessageData(newPayload));
+    
+    expect(newState.responseData).toEqual(newPayload);
+  });
+});
+
+============
+
+import platformReducer, { setPlatformData, updateField, resetUpdatedFields } from './platformSlice';
+
+describe('platformSlice reducer', () => {
+  const initialState = {
+    platform: '',
+    page_type: '',
+    configuration: {},
+    updatedFields: {},
+    endpoint: {},
+  };
+
+  test('should return the initial state when passed an unknown action', () => {
+    expect(platformReducer(undefined, { type: 'unknown' })).toEqual(initialState);
+  });
+
+  test('should handle setPlatformData action', () => {
+    const payload = {
+      platform: 'iOS',
+      page_type: 'home',
+      configuration: { theme: 'dark' },
+      endpoint: { url: 'https://api.example.com' },
+    };
+    const action = setPlatformData(payload);
+    const expectedState = { ...initialState, ...payload };
+
+    expect(platformReducer(initialState, action)).toEqual(expectedState);
+  });
+
+  test('should handle updateField action', () => {
+    const previousState = {
+      ...initialState,
+      updatedFields: { existingField: 'oldValue' },
+      configuration: { existingField: 'oldValue' },
+    };
+
+    const action = updateField({ field: 'newField', value: 'newValue' });
+
+    const newState = platformReducer(previousState, action);
+
+    expect(newState.updatedFields).toEqual({
+      existingField: 'oldValue',
+      newField: 'newValue',
+    });
+
+    expect(newState.configuration).toEqual({
+      existingField: 'oldValue',
+      newField: 'newValue',
+    });
+  });
+
+  test('should handle resetUpdatedFields action', () => {
+    const previousState = {
+      ...initialState,
+      updatedFields: { field1: 'value1', field2: 'value2' },
+    };
+
+    const newState = platformReducer(previousState, resetUpdatedFields());
+
+    expect(newState.updatedFields).toEqual({});
+  });
+});
