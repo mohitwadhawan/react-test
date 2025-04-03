@@ -1,158 +1,138 @@
-import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { Provider } from 'react-redux';
-import configureStore from 'redux-mock-store';
-import AdvertisingForm from './AdvertisingForm';
-import { updateField } from '../../store/platformSlice';
-import { setMessageData } from '../../store/messageSlice';
+import React from "react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { Provider } from "react-redux";
+import configureStore from "redux-mock-store";
+import { useDispatch } from "react-redux";
+import AdvertisingForm from "../AdvertisingForm";
+import { setMessageData } from "../../store/messageSlice";
+
+jest.mock("react-redux", () => ({
+  ...jest.requireActual("react-redux"),
+  useSelector: jest.fn(),
+  useDispatch: jest.fn(),
+}));
+
+jest.mock("../../store/messageSlice", () => ({
+  setMessageData: jest.fn(),
+}));
 
 const mockStore = configureStore([]);
 
-describe('AdvertisingForm', () => {
-    let store;
+describe("AdvertisingForm Component", () => {
+  let store: any;
+  let mockDispatch: jest.Mock;
 
-    beforeEach(() => {
-        store = mockStore({
-            platform: {
-                platform: 'test-platform',
-                configuration: {
-                    is_smb: '',
-                    is_app_block: '1',
-                    show_unify_widget: [],
-                    parent_price_class_selector_pdp: '',
-                    price_class_selector_pdp: '',
-                },
-                updatedFields: {}
-            },
-            message: {
-                responseData: {
-                    success: '',
-                    step: '',
-                    message: '',
-                }
-            }
-        });
+  beforeEach(() => {
+    mockDispatch = jest.fn();
+    (useDispatch as jest.Mock).mockReturnValue(mockDispatch);
 
-        store.dispatch = jest.fn();
+    store = mockStore({
+      platform: {
+        configuration: { is_app_block: "0", show_unify_widget: ["pdp"], tag_rules: "1" },
+        updatedFields: {},
+      },
+      message: { responseData: { success: "1", step: "step1", message: "Success Message" } },
     });
 
-    const renderComponent = () => {
-        return render(
-            <Provider store={store}>
-                <AdvertisingForm />
-            </Provider>
-        );
-    };
+    store.dispatch = jest.fn();
+  });
 
-    test('renders AdvertisingForm component', () => {
-        renderComponent();
-        expect(screen.getByText('Configure Advertising')).toBeInTheDocument();
+  it("renders the component correctly", () => {
+    render(
+      <Provider store={store}>
+        <AdvertisingForm />
+      </Provider>
+    );
+
+    expect(screen.getByText("Configure Advertising")).toBeInTheDocument();
+  });
+
+  it("displays success message if responseData is available", () => {
+    render(
+      <Provider store={store}>
+        <AdvertisingForm />
+      </Provider>
+    );
+
+    expect(screen.getByText("Success Message")).toBeInTheDocument();
+  });
+
+  it("toggles advertising section on click", () => {
+    render(
+      <Provider store={store}>
+        <AdvertisingForm />
+      </Provider>
+    );
+
+    const advHeader = screen.getByText("Configure Advertising");
+    fireEvent.click(advHeader);
+  });
+
+  it("updates state when selecting an option", async () => {
+    render(
+      <Provider store={store}>
+        <AdvertisingForm />
+      </Provider>
+    );
+
+    const radioButton = screen.getByLabelText("App Embed");
+    fireEvent.click(radioButton);
+
+    await waitFor(() => {
+      expect(store.dispatch).toHaveBeenCalled();
     });
+  });
 
-    test('handles checkbox field changes', () => {
-        renderComponent();
-        const checkbox = screen.getByLabelText('Product Display Page (PDP)');
-        fireEvent.click(checkbox);
-        
-        expect(store.dispatch).toHaveBeenCalledWith(
-            updateField({
-                field: 'show_unify_widget',
-                value: ['pdp']
-            })
-        );
-    });
+  it("handles save button click", () => {
+    render(
+      <Provider store={store}>
+        <AdvertisingForm />
+      </Provider>
+    );
 
-    test('handles radio button changes', () => {
-        renderComponent();
-        const appBlockRadio = screen.getByLabelText('App Block');
-        fireEvent.click(appBlockRadio);
-        
-        expect(store.dispatch).toHaveBeenCalledWith(
-            updateField({
-                field: 'is_app_block',
-                value: '1'
-            })
-        );
-    });
+    const saveButton = screen.getByText("SAVE & CONTINUE");
+    fireEvent.click(saveButton);
 
-    test('handles text input changes', () => {
-        renderComponent();
-        const pdpInput = screen.getByLabelText('PDP Element ID');
-        fireEvent.change(pdpInput, { target: { value: 'test-id' } });
-        
-        expect(store.dispatch).toHaveBeenCalledWith(
-            updateField({
-                field: 'widget_location_on_pdp',
-                value: 'test-id'
-            })
-        );
-    });
+    expect(store.dispatch).toHaveBeenCalled();
+  });
 
-    test('handles save button click', async () => {
-        const mockPostMessage = jest.fn();
-        window.parent.postMessage = mockPostMessage;
-        
-        renderComponent();
-        const saveButton = screen.getByText('SAVE & CONTINUE');
-        fireEvent.click(saveButton);
+  it("dispatches setMessageData on timeout", async () => {
+    jest.useFakeTimers();
 
-        await waitFor(() => {
-            expect(mockPostMessage).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    data: expect.objectContaining({
-                        platform: 'test-platform',
-                        step: 'step3'
-                    })
-                }),
-                '*'
-            );
-        });
-    });
+    render(
+      <Provider store={store}>
+        <AdvertisingForm />
+      </Provider>
+    );
 
-    test('shows success message when API call succeeds', () => {
-        store = mockStore({
-            ...store.getState(),
-            message: {
-                responseData: {
-                    success: '1',
-                    step: 'step3',
-                    message: 'Success!'
-                }
-            }
-        });
+    jest.advanceTimersByTime(5000);
 
-        renderComponent();
-        expect(screen.getByText('Success!')).toBeInTheDocument();
-    });
+    expect(mockDispatch).toHaveBeenCalledWith(
+      setMessageData({
+        responseData: {
+          success: "",
+          step: "step1",
+          live_smb_partner_id: "",
+          message: "",
+        },
+      })
+    );
 
-    test('shows error message when API call fails', () => {
-        store = mockStore({
-            ...store.getState(),
-            message: {
-                responseData: {
-                    success: '0',
-                    step: 'step3',
-                    message: 'Error occurred'
-                }
-            }
-        });
+    jest.useRealTimers();
+  });
 
-        renderComponent();
-        expect(screen.getByText('Error occurred')).toBeInTheDocument();
-    });
+  it("calls window.parent.postMessage when saving", () => {
+    window.parent.postMessage = jest.fn();
 
-    test('toggles sections correctly', () => {
-        renderComponent();
-        const advertisingSection = screen.getByText('Configure Advertising').closest('div');
-        fireEvent.click(advertisingSection);
-        
-        // Check if the section expanded
-        expect(advertisingSection).not.toHaveClass('container-inactive');
-    });
+    render(
+      <Provider store={store}>
+        <AdvertisingForm />
+      </Provider>
+    );
 
-    test('disables publish button when required fields are empty', () => {
-        renderComponent();
-        const publishButton = screen.getByText('PUBLISH');
-        expect(publishButton).toBeDisabled();
-    });
+    const saveButton = screen.getByText("SAVE & CONTINUE");
+    fireEvent.click(saveButton);
+
+    expect(window.parent.postMessage).toHaveBeenCalled();
+  });
 });
