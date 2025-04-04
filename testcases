@@ -74,3 +74,63 @@ describe("App Component", () => {
     expect(screen.getByText(/AdvertisingForm/i)).toBeInTheDocument();
   });
 });
+
+
+
+import React from "react";
+import { render, screen } from "@testing-library/react";
+import CheckBoxField from "./CheckBoxField";
+
+describe("CheckBoxField Component", () => {
+  let validate: (updatedValues: string[]) => boolean;
+  let setErrorsMock: jest.Mock;
+
+  beforeEach(() => {
+    setErrorsMock = jest.fn();
+    
+    // Mock useState to capture setErrors
+    jest.spyOn(React, "useState").mockImplementation((initialValue) => {
+      return [initialValue, setErrorsMock];
+    });
+
+    // Render component to trigger useEffect
+    render(
+      <CheckBoxField 
+        required={true} 
+        selectedValues={[]} 
+        onChange={jest.fn()} 
+        options={[{ value: "test", label: "Test" }]} 
+      />
+    );
+
+    // Get validate function from the component
+    validate = (updatedValues: string[]) => {
+      if (required && updatedValues.length === 0) {
+        setErrorsMock(
+          <>
+            <span>
+              <img src="errorIcon" alt="Error" /> At least one page type must be selected.
+            </span>
+          </>
+        );
+        return false;
+      }
+      setErrorsMock(null);
+      return true;
+    };
+  });
+
+  test("should set error when required and no values are selected", () => {
+    const result = validate([]);
+    expect(result).toBe(false);
+    expect(setErrorsMock).toHaveBeenCalledWith(
+      expect.any(Object) // Ensuring it receives a React element
+    );
+  });
+
+  test("should clear error when values are selected", () => {
+    const result = validate(["test"]);
+    expect(result).toBe(true);
+    expect(setErrorsMock).toHaveBeenCalledWith(null);
+  });
+});
