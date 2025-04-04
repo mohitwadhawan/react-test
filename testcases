@@ -1,0 +1,294 @@
+import React from 'react';
+import { render, fireEvent, screen, waitFor, act } from '@testing-library/react';
+import { Provider } from 'react-redux';
+import configureStore from 'redux-mock-store';
+import AdvertisingForm from '../AdvertisingForm';
+import { updateField } from '../../store/platformSlice';
+import { setMessageData } from '../../store/messageSlice';
+
+jest.useFakeTimers();
+
+const mockStore = configureStore([]);
+
+describe('AdvertisingForm', () => {
+    let store;
+    
+    beforeEach(() => {
+        jest.clearAllMocks();
+        store = mockStore({
+            platform: {
+                platform: 'shopify',
+                configuration: {
+                    show_unify_widget: [],
+                    is_smb: '',
+                    is_app_block: '1',
+                    parent_price_class_selector_pdp: '',
+                    price_class_selector_pdp: '',
+                    parent_price_class_selector_cart: '',
+                    price_class_selector_cart: '',
+                    parent_price_class_selector_plp: '',
+                    price_class_selector_plp: '',
+                    parent_origin: 'http://localhost',
+                },
+                updatedFields: {}
+            },
+            message: {
+                responseData: {
+                    success: '',
+                    step: '',
+                    message: '',
+                    live_smb_partner_id: '',
+                }
+            }
+        });
+        
+        store.dispatch = jest.fn();
+        window.parent.postMessage = jest.fn();
+    });
+
+    const renderComponent = (customStore = store) => {
+        return render(
+            <Provider store={customStore}>
+                <AdvertisingForm />
+            </Provider>
+        );
+    };
+
+    describe('Initial Rendering and State Management', () => {
+        it('initializes with correct SMB partner state', () => {
+            const customStore = mockStore({
+                ...store.getState(),
+                platform: {
+                    ...store.getState().platform,
+                    configuration: {
+                        ...store.getState().platform.configuration,
+                        is_smb: '1'
+                    }
+                }
+            });
+            renderComponent(customStore);
+            expect(screen.queryByText('Enable Synchrony Promotions')).not.toBeInTheDocument();
+        });
+
+        it('initializes with correct embed state', () => {
+            const customStore = mockStore({
+                ...store.getState(),
+                platform: {
+                    ...store.getState().platform,
+                    configuration: {
+                        ...store.getState().platform.configuration,
+                        is_app_block: '0'
+                    }
+                }
+            });
+            renderComponent(customStore);
+            expect(screen.getByPlaceholderText('Ex: pdp-advertising-widget')).toBeInTheDocument();
+        });
+
+        it('handles successful variable check', () => {
+            const customStore = mockStore({
+                ...store.getState(),
+                platform: {
+                    ...store.getState().platform,
+                    configuration: {
+                        ...store.getState().platform.configuration,
+                        parent_price_class_selector_pdp: 'test',
+                        price_class_selector_pdp: 'test'
+                    }
+                }
+            });
+            renderComponent(customStore);
+        });
+    });
+
+    describe('Response Data Handling', () => {
+        it('handles step2 response', async () => {
+            const customStore = mockStore({
+                ...store.getState(),
+                message: {
+                    responseData: {
+                        step: 'step2',
+                        success: '1',
+                        live_smb_partner_id: '123'
+                    }
+                }
+            });
+            renderComponent(customStore);
+            await waitFor(() => {
+                expect(screen.getByText('Page Options')).toBeInTheDocument();
+            });
+        });
+
+        it('handles step3 success response', async () => {
+            const customStore = mockStore({
+                ...store.getState(),
+                message: {
+                    responseData: {
+                        step: 'step3',
+                        success: '1'
+                    }
+                }
+            });
+            renderComponent(customStore);
+        });
+
+        it('handles step4 success response', async () => {
+            const customStore = mockStore({
+                ...store.getState(),
+                message: {
+                    responseData: {
+                        step: 'step4',
+                        success: '1'
+                    }
+                }
+            });
+            renderComponent(customStore);
+        });
+
+        it('handles step3 error response', async () => {
+            const customStore = mockStore({
+                ...store.getState(),
+                message: {
+                    responseData: {
+                        step: 'step3',
+                        success: '0'
+                    }
+                }
+            });
+            renderComponent(customStore);
+        });
+
+        it('handles step4 error response', async () => {
+            const customStore = mockStore({
+                ...store.getState(),
+                message: {
+                    responseData: {
+                        step: 'step4',
+                        success: '0'
+                    }
+                }
+            });
+            renderComponent(customStore);
+        });
+
+        it('handles step1 response', async () => {
+            const customStore = mockStore({
+                ...store.getState(),
+                message: {
+                    responseData: {
+                        step: 'step1',
+                        success: '1'
+                    }
+                }
+            });
+            renderComponent(customStore);
+        });
+
+        it('clears message after timeout', async () => {
+            const customStore = mockStore({
+                ...store.getState(),
+                message: {
+                    responseData: {
+                        step: 'step1',
+                        success: '1',
+                        message: 'Test message'
+                    }
+                }
+            });
+            renderComponent(customStore);
+            
+            act(() => {
+                jest.advanceTimersByTime(5000);
+            });
+            
+            expect(store.dispatch).toHaveBeenCalledWith(
+                setMessageData({
+                    responseData: {
+                        success: '',
+                        step: 'step1',
+                        live_smb_partner_id: '',
+                        message: '',
+                    },
+                })
+            );
+        });
+    });
+
+    describe('User Interactions', () => {
+        it('handles all field changes', () => {
+            renderComponent();
+            
+            // Test all text input fields
+            const textInputs = [
+                'widget_location_on_pdp',
+                'widget_location_on_plp',
+                'widget_location_on_cart',
+                'parent_price_class_selector_pdp',
+                'price_class_selector_pdp',
+                'parent_price_class_selector_cart',
+                'price_class_selector_cart',
+                'price_class_selector_plp'
+            ];
+
+            textInputs.forEach(fieldName => {
+                const input = screen.getByLabelText(new RegExp(fieldName, 'i')) || 
+                            screen.getByPlaceholderText(new RegExp(fieldName, 'i'));
+                fireEvent.change(input, { target: { value: 'test-value' } });
+                expect(store.dispatch).toHaveBeenCalledWith(
+                    updateField({ field: fieldName, value: 'test-value' })
+                );
+            });
+        });
+
+        it('handles section toggling', () => {
+            renderComponent();
+            const advertisingSection = screen.getByText(/Configure Advertising/i);
+            const variableSection = screen.getByText(/Page Options/i);
+
+            fireEvent.click(advertisingSection);
+            fireEvent.click(variableSection);
+        });
+
+        it('handles save button clicks with different steps', () => {
+            renderComponent();
+            
+            // Test save for step3
+            const saveButton = screen.getByText('SAVE & CONTINUE');
+            fireEvent.click(saveButton);
+            
+            // Test save for step4
+            const publishButton = screen.getByText('PUBLISH');
+            fireEvent.click(publishButton);
+        });
+
+        it('handles error states in form fields', () => {
+            renderComponent();
+            const checkbox = screen.getByLabelText('Product Display Page (PDP)');
+            fireEvent.click(checkbox);
+            expect(store.dispatch).toHaveBeenCalled();
+        });
+    });
+
+    describe('Edge Cases', () => {
+        it('handles missing configuration values', () => {
+            const customStore = mockStore({
+                ...store.getState(),
+                platform: {
+                    ...store.getState().platform,
+                    configuration: {}
+                }
+            });
+            renderComponent(customStore);
+        });
+
+        it('handles null response data', () => {
+            const customStore = mockStore({
+                ...store.getState(),
+                message: {
+                    responseData: null
+                }
+            });
+            renderComponent(customStore);
+        });
+    });
+});
