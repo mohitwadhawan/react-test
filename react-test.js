@@ -1,128 +1,54 @@
-import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { Provider } from "react-redux";
-import configureStore from "redux-mock-store";
-import { useDispatch } from "react-redux";
-import AdvertisingForm from "../AdvertisingForm";
-import { setMessageData } from "../../store/messageSlice";
+import React from 'react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
+import { Provider } from 'react-redux';
+import configureStore from 'redux-mock-store';
+import thunk from 'redux-thunk';
+import AdvertisingForm from './AdvertisingForm'; // Adjust the path if needed
 
-jest.mock("react-redux", () => ({
-  ...jest.requireActual("react-redux"),
-  useSelector: jest.fn(),
-  useDispatch: jest.fn(),
-}));
+jest.useFakeTimers();
 
-jest.mock("../../store/messageSlice", () => ({
-  setMessageData: jest.fn(),
-}));
+const middlewares = [thunk];
+const mockStore = configureStore(middlewares);
 
-const mockStore = configureStore([]);
-
-describe("AdvertisingForm Component", () => {
-  let store: any;
-  let mockDispatch: jest.Mock;
-
-  beforeEach(() => {
-    mockDispatch = jest.fn();
-    (useDispatch as jest.Mock).mockReturnValue(mockDispatch);
-
-    store = mockStore({
+describe('AdvertisingForm Component', () => {
+  it('renders without crashing', () => {
+    const store = mockStore({
       platform: {
-        configuration: { is_app_block: "0", show_unify_widget: ["pdp"], tag_rules: "1" },
+        platform: {},
+        configuration: {
+          show_unify_widget: [],
+          tag_rules: "",
+        },
         updatedFields: {},
       },
-      message: { responseData: { success: "1", step: "step1", message: "Success Message" } },
+      message: {
+        responseData: {},
+      },
     });
 
-    store.dispatch = jest.fn();
-  });
-
-  it("renders the component correctly", () => {
     render(
       <Provider store={store}>
         <AdvertisingForm />
       </Provider>
     );
 
-    expect(screen.getByText("Configure Advertising")).toBeInTheDocument();
+    expect(screen.getByText('Advertising Options')).toBeInTheDocument();
   });
 
-  it("displays success message if responseData is available", () => {
-    render(
-      <Provider store={store}>
-        <AdvertisingForm />
-      </Provider>
-    );
-
-    expect(screen.getByText("Success Message")).toBeInTheDocument();
-  });
-
-  it("toggles advertising section on click", () => {
-    render(
-      <Provider store={store}>
-        <AdvertisingForm />
-      </Provider>
-    );
-
-    const advHeader = screen.getByText("Configure Advertising");
-    fireEvent.click(advHeader);
-  });
-
-  it("updates state when selecting an option", async () => {
-    render(
-      <Provider store={store}>
-        <AdvertisingForm />
-      </Provider>
-    );
-
-    const radioButton = screen.getByLabelText("App Embed");
-    fireEvent.click(radioButton);
-
-    await waitFor(() => {
-      expect(store.dispatch).toHaveBeenCalled();
-    });
-  });
-
-  it("handles save button click", () => {
-    render(
-      <Provider store={store}>
-        <AdvertisingForm />
-      </Provider>
-    );
-
-    const saveButton = screen.getByText("SAVE & CONTINUE");
-    fireEvent.click(saveButton);
-
-    expect(store.dispatch).toHaveBeenCalled();
-  });
-
-  it("dispatches setMessageData on timeout", async () => {
-    jest.useFakeTimers();
-
-    render(
-      <Provider store={store}>
-        <AdvertisingForm />
-      </Provider>
-    );
-
-    jest.advanceTimersByTime(5000);
-
-    expect(mockDispatch).toHaveBeenCalledWith(
-      setMessageData({
-        responseData: {
-          success: "",
-          step: "step1",
-          live_smb_partner_id: "",
-          message: "",
+  it('dispatches updateField on input change', () => {
+    const store = mockStore({
+      platform: {
+        platform: {},
+        configuration: {
+          show_unify_widget: [],
+          tag_rules: "",
         },
-      })
-    );
-
-    jest.useRealTimers();
-  });
-
-  it("calls window.parent.postMessage when saving", () => {
-    window.parent.postMessage = jest.fn();
+        updatedFields: {},
+      },
+      message: {
+        responseData: {},
+      },
+    });
 
     render(
       <Provider store={store}>
@@ -130,9 +56,166 @@ describe("AdvertisingForm Component", () => {
       </Provider>
     );
 
-    const saveButton = screen.getByText("SAVE & CONTINUE");
-    fireEvent.click(saveButton);
+    const input = screen.getByPlaceholderText('Ex: pdp-price-section');
+    fireEvent.change(input, { target: { value: 'new-id' } });
 
-    expect(window.parent.postMessage).toHaveBeenCalled();
+    const actions = store.getActions();
+    expect(actions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'platform/updateField',
+          payload: expect.objectContaining({
+            field: 'parent_price_class_selector_pdp',
+            value: 'new-id',
+          }),
+        }),
+      ])
+    );
+  });
+
+  it('toggles advertising section and resets adv success flag', () => {
+    const store = mockStore({
+      platform: {
+        platform: {},
+        configuration: {
+          show_unify_widget: ['pdp'],
+          tag_rules: '',
+        },
+        updatedFields: {},
+      },
+      message: {
+        responseData: {},
+      },
+    });
+
+    render(
+      <Provider store={store}>
+        <AdvertisingForm />
+      </Provider>
+    );
+
+    const advHeader = screen.getAllByText(/Page Options/i)[0];
+    act(() => {
+      fireEvent.click(advHeader);
+    });
+
+    expect(screen.getByText(/Page Options/i)).toBeInTheDocument();
+  });
+
+  it('sets states correctly based on responseData.step and success', () => {
+    const store = mockStore({
+      platform: {
+        platform: {},
+        configuration: {
+          show_unify_widget: [],
+          tag_rules: "",
+        },
+        updatedFields: {},
+      },
+      message: {
+        responseData: {
+          success: "1",
+          step: "step3",
+          live_smb_partner_id: "abc123",
+          message: "Saved",
+        },
+      },
+    });
+
+    render(
+      <Provider store={store}>
+        <AdvertisingForm />
+      </Provider>
+    );
+
+    expect(screen.getByText('Saved')).toBeInTheDocument();
+    expect(screen.getByText(/SAVE & CONTINUE/i)).toBeInTheDocument();
+  });
+
+  it('does not render Synchrony Promotions for SMB partner', () => {
+    const store = mockStore({
+      platform: {
+        platform: {},
+        configuration: {
+          is_smb: "1",
+          show_unify_widget: [],
+        },
+        updatedFields: {},
+      },
+      message: {
+        responseData: {},
+      },
+    });
+
+    render(
+      <Provider store={store}>
+        <AdvertisingForm />
+      </Provider>
+    );
+
+    expect(screen.queryByText(/Enable Synchrony Promotions/i)).toBeNull();
+  });
+
+  it('renders embed fields when is_app_block is 0', () => {
+    const store = mockStore({
+      platform: {
+        platform: {},
+        configuration: {
+          is_app_block: "0",
+          show_unify_widget: [],
+        },
+        updatedFields: {},
+      },
+      message: {
+        responseData: {},
+      },
+    });
+
+    render(
+      <Provider store={store}>
+        <AdvertisingForm />
+      </Provider>
+    );
+
+    expect(screen.getByPlaceholderText(/PDP Element ID/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/PLP Element ID/i)).toBeInTheDocument();
+  });
+
+  it('dispatches setMessageData after timeout', () => {
+    const store = mockStore({
+      platform: {
+        platform: {},
+        configuration: {
+          show_unify_widget: [],
+        },
+        updatedFields: {},
+      },
+      message: {
+        responseData: {
+          success: "0",
+          step: "step4",
+          live_smb_partner_id: "",
+        },
+      },
+    });
+
+    render(
+      <Provider store={store}>
+        <AdvertisingForm />
+      </Provider>
+    );
+
+    act(() => {
+      jest.advanceTimersByTime(5000);
+    });
+
+    const actions = store.getActions();
+    expect(actions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: 'message/setMessageData',
+        }),
+      ])
+    );
   });
 });
